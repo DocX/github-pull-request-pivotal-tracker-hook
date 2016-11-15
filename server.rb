@@ -15,6 +15,10 @@ end
 
 # Endpoints :
 
+get '/' do
+  "Give me your pull requests!"
+end
+
 # /github... who knows, if in future we support more sources?
 post '/github' do
   payload_body = request.body.read
