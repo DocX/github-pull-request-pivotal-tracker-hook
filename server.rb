@@ -68,6 +68,6 @@ def finish_story(tracker_id)
   # Mark tracker issue as "finished"
   tracker = TrackerApi::Client.new(token: ENV['PIVOTAL_TRACKER_API_TOKEN'])
   story = tracker.story(tracker_id)
-  story.state = 'finished'
+  story.current_state = 'finished'
   story.save
 end
