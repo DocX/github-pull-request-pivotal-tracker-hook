@@ -21,3 +21,5 @@ export PIVOTAL_TRACKER_API_TOKEN=your_pivotal_tracker_API_token
 export SECRET_TOKEN=$( ruby -rsecurerandom -e 'puts SecureRandom.hex(20)' )
 ruby server.rb
 ```
+
+test
