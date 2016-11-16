@@ -31,7 +31,7 @@ end
 # Logic :
 
 # assume PT IDs are always at least 9 digits long
-TRACKER_ID_REGEXP = /([0-9]{9,})-/
+TRACKER_ID_REGEXP = /([0-9]{9,})/
 
 # GitHub payload signature verification
 def verify_signature(payload_body)
@@ -72,6 +72,12 @@ def finish_story(tracker_id)
   # Mark tracker issue as "finished"
   tracker = TrackerApi::Client.new(token: ENV['PIVOTAL_TRACKER_API_TOKEN'])
   story = tracker.story(tracker_id)
+
+  unless story
+    puts 'Tracker ID doesnt exist in Pivotal'
+    return
+  end
+
   story.current_state = 'finished'
   story.save
 end
