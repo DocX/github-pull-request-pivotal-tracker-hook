@@ -52,10 +52,10 @@ def process_github_event(payload_json)
   tracker_id = tracker_id_from_branch(head_branch)
   return unless tracker_id
 
-  handle_story_pull_request(tracker_id, pull_request)
+  handle_story_pull_request(tracker_id, payload_json)
 end
 
-def handle_story_pull_request(tracker_id, pull_request)
+def handle_story_pull_request(tracker_id, payload_json)
   story = get_pt_story(tracker_id)
   return unless story
 
@@ -67,7 +67,7 @@ def handle_story_pull_request(tracker_id, pull_request)
     "Opened new PR: #{payload_json['pull_request']['html_url']}"
   )
   # add Story URL to PR
-  add_story_url_to_pr_description(payload_json, story)
+  add_story_url_to_pr_description(payload_json['pull_request'], story)
 end
 
 def tracker_id_from_branch(head_branch)
@@ -93,13 +93,14 @@ def add_comment_to_story(story, comment)
   return unless story
   url = "https://www.pivotaltracker.com/services/v5/projects/#{story.project_id}/stories/#{story.id}/comments"
 
-  Excon.post(url,
+  response = Excon.post(url,
     body: { text: comment }.to_json,
     headers: {
       "Content-Type" => "application/json",
       "X-TrackerToken" => ENV['PIVOTAL_TRACKER_API_TOKEN']
     }
   )
+  puts "Pivotal Tracker POST #{url}: Response #{response.status}"
 end
 
 def get_pt_story(tracker_id)
@@ -117,15 +118,17 @@ end
 def add_story_url_to_pr_description(pull_request, story)
   return unless story
 
-  old_body = pull_request['pull_request']['body']
-  new_body = "PT: #{story.url}\r\n\r\n#{old_body}"
-  url = pull_request['pull_request']['url']
+  old_body = pull_request['body']
+  new_body = "Pivotal: #{story.url}\r\n\r\n#{old_body}"
+  url = pull_request['url']
 
-  Excon.patch(url,
+  response = Excon.patch(url,
     body: { body: new_body }.to_json,
     headers: {
-      "Content-Type" => "application/json",
-      "Authorization" => "token #{ENV['GITHUB_OAUTH_TOKEN']}"
+      "User-Agent" => "github-pr-pt-hook",
+      "Authorization" => "Token #{ENV['GITHUB_OAUTH_TOKEN']}",
+      "Content-Type" => "application/json"
     }
   )
+  puts "GitHub PATCH #{url}: Response #{response.status}"
 end
