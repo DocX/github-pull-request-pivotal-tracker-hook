@@ -23,3 +23,5 @@ export GITHUB_OAUTH_TOKEN=your_github_token
 export SECRET_TOKEN=$( ruby -rsecurerandom -e 'puts SecureRandom.hex(20)' )
 ruby server.rb
 ```
+
+test
