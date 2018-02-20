@@ -2,6 +2,9 @@ require 'sinatra'
 require 'json'
 require 'tracker_api'
 
+#Needed to bind to all interfaces
+set :bind, '0.0.0.0'
+
 # Check all ENV variables are set
 [
   'PIVOTAL_TRACKER_API_TOKEN',
