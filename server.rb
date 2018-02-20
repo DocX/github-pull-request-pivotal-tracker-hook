@@ -54,16 +54,18 @@ def process_github_event(payload_json)
 
   tracker_id = tracker_id_from_branch(head_branch)
   return unless tracker_id
-
   handle_story_pull_request(tracker_id, payload_json)
 end
 
 def handle_story_pull_request(tracker_id, payload_json)
   story = get_pt_story(tracker_id)
   return unless story
-
-  # finish story
-  finish_story(story)
+  # types: feature, bug, chore, release
+  puts "It's a story type of #{story.story_type}"
+  if ["feature","bug"].include?(story.story_type)
+    # finish story
+    finish_story(story)
+  end
   # add PR url to story comments
   add_comment_to_story(
     story,
