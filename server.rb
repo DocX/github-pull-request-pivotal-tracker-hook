@@ -46,9 +46,9 @@ end
 
 def process_github_event(payload_json)
   # We are interested only in new pull requests
-  return unless payload_json['action'] == 'opened' && payload_json.key?('pull_request')
+  return unless payload_json.key?('pull_request') && (payload_json['action'] == 'opened' || payload_json['action'] == 'merged')
 
-  puts 'It\'s a Opened Pull Request!'
+  puts 'It\'s a Pull Request!'
   head_branch = payload_json['pull_request']['head']['ref']
   puts "Branch: #{head_branch}"
 
@@ -66,13 +66,27 @@ def handle_story_pull_request(tracker_id, payload_json)
     # finish story
     finish_story(story)
   end
-  # add PR url to story comments
-  add_comment_to_story(
-    story,
-    "Opened new PR: #{payload_json['pull_request']['html_url']}"
-  )
-  # add Story URL to PR
-  add_story_url_to_pr_description(payload_json['pull_request'], story)
+  if payload_json['action'] == 'opened'
+    # add PR url to story comments
+    add_comment_to_story(
+      story,
+      "Opened new PR: #{payload_json['pull_request']['html_url']}"
+    )
+    # add Story URL to PR
+    add_story_url_to_pr_description(payload_json['pull_request'], story)
+  else
+    # add PR merged to story comments
+    add_comment_to_story(
+      story,
+      "Merged PR: #{payload_json['pull_request']['html_url']}"
+    )
+
+    #add merged label to story
+    add_label_to_story(
+      story,
+      "merged"
+    )
+  end
 end
 
 def tracker_id_from_branch(head_branch)
@@ -100,6 +114,20 @@ def add_comment_to_story(story, comment)
 
   response = Excon.post(url,
     body: { text: comment }.to_json,
+    headers: {
+      "Content-Type" => "application/json",
+      "X-TrackerToken" => ENV['PIVOTAL_TRACKER_API_TOKEN']
+    }
+  )
+  puts "Pivotal Tracker POST #{url}: Response #{response.status}"
+end
+
+def add_label_to_story(story, label)
+  return unless story
+  url = "https://www.pivotaltracker.com/services/v5/projects/#{story.project_id}/stories/#{story.id}/labels"
+
+  response = Excon.post(url,
+    body: { name: label }.to_json,
     headers: {
       "Content-Type" => "application/json",
       "X-TrackerToken" => ENV['PIVOTAL_TRACKER_API_TOKEN']
