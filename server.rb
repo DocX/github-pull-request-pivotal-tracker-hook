@@ -46,7 +46,7 @@ end
 
 def process_github_event(payload_json)
   # We are interested only in new pull requests
-  return unless payload_json.key?('pull_request') && (payload_json['action'] == 'opened' || payload_json['action'] == 'merged')
+  return unless payload_json.key?('pull_request') && (payload_json['action'] == 'opened' || payload_json['action'] == 'closed')
 
   puts 'It\'s a Pull Request!'
   head_branch = payload_json['pull_request']['head']['ref']
@@ -59,6 +59,8 @@ end
 
 def handle_story_pull_request(tracker_id, payload_json)
   story = get_pt_story(tracker_id)
+  merged = payload_json['pull_request']['merged_at']
+
   return unless story
   # types: feature, bug, chore, release
   puts "It's a story type of #{story.story_type}"
@@ -74,7 +76,8 @@ def handle_story_pull_request(tracker_id, payload_json)
     )
     # add Story URL to PR
     add_story_url_to_pr_description(payload_json['pull_request'], story)
-  else
+  elsif merged != nil
+    puts "Merge not nil"
     # add PR merged to story comments
     add_comment_to_story(
       story,
