@@ -2,6 +2,8 @@ require 'sinatra'
 require 'json'
 require 'tracker_api'
 
+GITHUB_URL = "https://www.pivotaltracker.com/services/v5/projects/"
+
 #Needed to bind to all interfaces
 set :bind, '0.0.0.0'
 
@@ -113,7 +115,7 @@ end
 
 def add_comment_to_story(story, comment)
   return unless story
-  url = "https://www.pivotaltracker.com/services/v5/projects/#{story.project_id}/stories/#{story.id}/comments"
+  url = "#{GITHUB_URL}#{story.project_id}/stories/#{story.id}/comments"
 
   response = Excon.post(url,
     body: { text: comment }.to_json,
@@ -127,7 +129,7 @@ end
 
 def add_label_to_story(story, label)
   return unless story
-  url = "https://www.pivotaltracker.com/services/v5/projects/#{story.project_id}/stories/#{story.id}/labels"
+  url = "#{GITHUB_URL}#{story.project_id}/stories/#{story.id}/labels"
 
   response = Excon.post(url,
     body: { name: label }.to_json,
