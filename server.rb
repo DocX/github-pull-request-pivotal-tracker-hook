@@ -66,11 +66,11 @@ def handle_story_pull_request(tracker_id, payload_json)
   return unless story
   # types: feature, bug, chore, release
   puts "It's a story type of #{story.story_type}"
-  if ["feature","bug"].include?(story.story_type)
-    # finish story
-    finish_story(story)
-  end
   if payload_json['action'] == 'opened'
+    if ["feature","bug"].include?(story.story_type)
+      # finish story
+      finish_story(story)
+    end
     # add PR url to story comments
     add_comment_to_story(
       story,
