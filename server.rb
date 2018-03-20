@@ -2,6 +2,11 @@ require 'sinatra'
 require 'json'
 require 'tracker_api'
 
+GITHUB_URL = "https://www.pivotaltracker.com/services/v5/projects/"
+
+#Needed to bind to all interfaces
+set :bind, '0.0.0.0'
+
 # Check all ENV variables are set
 [
   'PIVOTAL_TRACKER_API_TOKEN',
@@ -43,31 +48,50 @@ end
 
 def process_github_event(payload_json)
   # We are interested only in new pull requests
-  return unless payload_json['action'] == 'opened' && payload_json.key?('pull_request')
+  return unless payload_json.key?('pull_request') && (payload_json['action'] == 'opened' || payload_json['action'] == 'closed')
 
-  puts 'It\'s a Opened Pull Request!'
+  puts 'It\'s a Pull Request!'
   head_branch = payload_json['pull_request']['head']['ref']
   puts "Branch: #{head_branch}"
 
   tracker_id = tracker_id_from_branch(head_branch)
   return unless tracker_id
-
   handle_story_pull_request(tracker_id, payload_json)
 end
 
 def handle_story_pull_request(tracker_id, payload_json)
   story = get_pt_story(tracker_id)
-  return unless story
+  merged = payload_json['pull_request']['merged_at']
 
-  # finish story
-  finish_story(story)
-  # add PR url to story comments
-  add_comment_to_story(
-    story,
-    "Opened new PR: #{payload_json['pull_request']['html_url']}"
-  )
-  # add Story URL to PR
-  add_story_url_to_pr_description(payload_json['pull_request'], story)
+  return unless story
+  # types: feature, bug, chore, release
+  puts "It's a story type of #{story.story_type}"
+  if payload_json['action'] == 'opened'
+    if ["feature","bug"].include?(story.story_type)
+      # finish story
+      finish_story(story)
+    end
+    # add PR url to story comments
+    add_comment_to_story(
+      story,
+      "Opened new PR: #{payload_json['pull_request']['html_url']}"
+    )
+    # add Story URL to PR
+    add_story_url_to_pr_description(payload_json['pull_request'], story)
+  elsif merged != nil
+    puts "Merge not nil"
+    # add PR merged to story comments
+    add_comment_to_story(
+      story,
+      "Merged PR: #{payload_json['pull_request']['html_url']}"
+    )
+
+    #add merged label to story
+    add_label_to_story(
+      story,
+      "merged"
+    )
+  end
 end
 
 def tracker_id_from_branch(head_branch)
@@ -91,10 +115,24 @@ end
 
 def add_comment_to_story(story, comment)
   return unless story
-  url = "https://www.pivotaltracker.com/services/v5/projects/#{story.project_id}/stories/#{story.id}/comments"
+  url = "#{GITHUB_URL}#{story.project_id}/stories/#{story.id}/comments"
 
   response = Excon.post(url,
     body: { text: comment }.to_json,
+    headers: {
+      "Content-Type" => "application/json",
+      "X-TrackerToken" => ENV['PIVOTAL_TRACKER_API_TOKEN']
+    }
+  )
+  puts "Pivotal Tracker POST #{url}: Response #{response.status}"
+end
+
+def add_label_to_story(story, label)
+  return unless story
+  url = "#{GITHUB_URL}#{story.project_id}/stories/#{story.id}/labels"
+
+  response = Excon.post(url,
+    body: { name: label }.to_json,
     headers: {
       "Content-Type" => "application/json",
       "X-TrackerToken" => ENV['PIVOTAL_TRACKER_API_TOKEN']
